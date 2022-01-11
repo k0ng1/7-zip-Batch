@@ -1,16 +1,15 @@
 @echo off
 
 
-set z7z="%ProgramFiles%\7-Zip-Zstandard\7z.exe"
+set z7z="%ProgramW6432%\7-Zip-Zstandard\7z.exe"
 @REM set base=%z7z% %command% "%%X.%format%" "%%X\" -mx%level% -m0=%method% -mhe=%encFilename% %deleteAfter% %sfx%
 @rem all variable default is 0
 @rem 0 is folder
 @rem 1 is file
 set inputType=0
 
-@rem 0 is false
-@rem 1 is true
-set Subfolder=true
+
+set subfolder=off
 
 @REM default is a
 @rem a is Add
@@ -55,6 +54,9 @@ set deleteAfter=0
 set sfx=0
 
 set volume=
+@REM Output filename
+set outFilename=%%X
+
 @REM default is zstd
 set gotoLevel=:levelZstd
 
@@ -64,9 +66,6 @@ set blockSize=
 
 :mainMenu
 cls
-echo.
-@REM echo Console: %z7z% %command% "%%X.7z" "%%X\" %password% -mx%level% -t7z -m0=%method% -mhe=%encFilename% %deleteAfter%
-echo.
 echo.
 echo MainMenu
 echo.
@@ -83,25 +82,28 @@ if %inputType% equ 0 (echo 2 - Input Type [Folders]) else (echo 2 - Input Type [
 echo 3 - Archive Format [%format%]
 
 echo 4 - Compression Method [%method%]
-echo 5 - Compression Level [%levelString%]
+echo 5 - Compression Level [%levelString% (%level%)]
 echo 6 - Password [%password%]
 if [%format%]==[7z] (if %encFilename% equ 0 (echo 7 - Encrypt Filename [off]) else (echo 7 - Encrypt Filename [on]))
 if %deleteAfter% == 0 (echo 8 - Delete After [off]) else (echo 8 - Delete After [on])
 if %sfx% == 0 (echo 9 - SFX Archive [off]) else (echo 9 - SFX Archive [on])
 echo 10 - Split Volume [%volume%]
+echo 11 - Subfolder [%subfolder%]
 echo.
 echo s - Start
 echo q - Exit
-echo.
-echo.
 
-set base=%z7z% %command% "%%X.%format%" "%%X\" -mx%level% -m0=%method%
+set base=%z7z% %command% "%outFilename%.%format%" "%%X\" -mx%level% -m0=%method%
 if %encFilename% equ 1 (set base=%base% -mhe=on)
 if %deleteAfter% equ 1 (set base=%base% -sdel)
 if %sfx% equ 1 (set base=%base% -sfx7z.sfx)
 if [%password%] neq [] (set base=%base% -p"%password%")
 if [%volume%] neq [] (set base=%base% -v%volume%)
-
+echo.
+echo.
+echo %base%
+echo.
+echo.
 @REM choice /c 12345678sq /n /m "Choose a menu option, or press 0 to Exit: "
 set /p _mainmenu="Choose a menu option, or press 0 to Exit: "
 @REM set _mainmenu=%errorlevel%
@@ -113,8 +115,9 @@ if %_mainmenu% == 5 goto %gotoLevel%
 if %_mainmenu% == 6 goto :passwordMenu
 if %_mainmenu% == 7 (if %encFilename% equ 1 (set encFilename=0) else (set encFilename=1))& goto :mainMenu
 if %_mainmenu% == 8 (if %deleteAfter% equ 1 (set deleteAfter=0) else (set deleteAfter=1))& goto :mainMenu
-if %_mainmenu% == 9 (if %sfx% equ 1 (set sfx=0& set format=exe) else (set sfx=1& set format=7z))& goto :mainMenu
+if %_mainmenu% == 9 (if %sfx% equ 1 (set sfx=0& set format=7z) else (set sfx=1& set format=exe))& goto :mainMenu
 if %_mainmenu% == 10 goto :volumeMenu
+if %_mainmenu% == 11 (if [%subfolder%]==[on] (set subfolder=off& set outFilename=%%X) else (set subfolder=on& set outFilename=%%X\%%X))& goto :mainMenu
 if [%_mainmenu%] equ [s] goto %start%
 if [%_mainmenu%] equ [q] goto :eof
 goto :mainMenu
@@ -134,6 +137,8 @@ if %_commandMenu% equ 1 (set command=a& goto :mainMenu)
 if %_commandMenu% equ 2 (set command=u& goto :mainMenu)
 if %_commandMenu% equ 3 (set command=x& goto :mainMenu)
 goto :mainMenu
+
+:commandAddMenu
 
 :methodMenu
 cls
@@ -230,9 +235,7 @@ if %_volumeSize% equ 10 (
 )
 
 :SubfolderMunu
-set size=0
-for /r %%x in (folder\*) do set /a size+=%%~zx
-echo %size% Bytes
+
 
 :startAdd7z
 for /d %%X in (*) do (
